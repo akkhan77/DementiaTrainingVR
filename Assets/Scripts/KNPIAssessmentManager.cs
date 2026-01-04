@@ -36,10 +36,24 @@ public class KNPIAssessmentManager : MonoBehaviour
     [Header("Result Panel Audios")]
     public AudioClip debriefingIntro; // 11.mp3
     public AudioClip aiFinalFeedback; // ai feedback10.mp3
+    [Header("Result Logic Settings")]
+    private int retryCount = 0;
+    public GameObject nextPanel;
+    [Header("KNPI Result Sounds")]
+    public AudioClip knpiCorrectSound; // Question2_correct.mp3
+    public AudioClip knpiWrongSound;
+    public GameObject knpiPanel;
+    private Coroutine flowRoutine;
+    private void Start()
+    {
+        StartKNPISequence();
+       
+    }
 
     public void StartKNPISequence()
     {
-        StartCoroutine(KNPIFlowRoutine());
+        // Routine ko variable mein save karein
+        flowRoutine = StartCoroutine(KNPIFlowRoutine());
     }
 
     IEnumerator KNPIFlowRoutine()
@@ -57,6 +71,12 @@ public class KNPIAssessmentManager : MonoBehaviour
 
     public void StartAssessment()
     {
+        // 1. Agar routine chal rahi hai toh usay khatam karein
+        if (flowRoutine != null) StopCoroutine(flowRoutine);
+
+        // 2. Audio band karein
+        audioSource.Stop();
+
         currentQuestionIndex = 0;
         ShowQuestion(currentQuestionIndex);
     }
@@ -68,7 +88,56 @@ public class KNPIAssessmentManager : MonoBehaviour
         audioSource.clip = questions[index].questionAudio;
         audioSource.Play();
     }
+    bool IsKNPIResultCorrect()
+    {
+        for (int i = 0; i < questions.Length; i++)
+        {
+            // Index 2 Point 3 ke liye hai ( 망상=0, 환각=1, 초조/공격성=2 )
+            if (i == 2)
+            {
+                if (questions[i].isPresent == false) return false; // Point 3 "Yes" hona chahiye
+            }
+            else
+            {
+                if (questions[i].isPresent == true) return false; // Baqi sab "No" hone chahiye
+            }
+        }
+        return true;
+    }
 
+    public void OnKNPIResultButtonClick()
+    {
+        bool isPerfect = IsKNPIResultCorrect();
+
+        if (isPerfect)
+        {
+            // Sahi Result: Sound bajayein aur aglay panel par jayein
+            if (knpiCorrectSound != null) audioSource.PlayOneShot(knpiCorrectSound);
+
+            resultPanel.SetActive(false);
+            if (nextPanel != null) nextPanel.SetActive(true);
+        }
+        else
+        {
+            // Ghalat Result: Wrong sound bajayein
+            if (knpiWrongSound != null) audioSource.PlayOneShot(knpiWrongSound);
+
+            if (retryCount < 1)
+            {
+                // Pehli baar ghalti: Retry karwayein
+                retryCount++;
+                resultPanel.SetActive(false);
+                knpiPanel.SetActive(true);
+                StartAssessment(); // Sab reset karke shuru se start
+            }
+            else
+            {
+                // Doosri baar bhi ghalti: Phir bhi aglay panel par bhej dein (ya jo apka flow hai)
+                resultPanel.SetActive(false);
+                if (nextPanel != null) nextPanel.SetActive(true);
+            }
+        }
+    }
     public void OnClickAnswer(bool userSelection)
     {
         // 1. User ki choice save karein taake result mein dikh sake
@@ -94,7 +163,7 @@ public class KNPIAssessmentManager : MonoBehaviour
 
     void ShowTryAgain()
     {
-        hasTriedAgain = true; // Mark kar diya ke ek bar ghalat ho chuka hai
+        hasTriedAgain = true;
         tryAgainPanel.SetActive(true);
 
         if (tryAgainAudio != null)
@@ -102,6 +171,15 @@ public class KNPIAssessmentManager : MonoBehaviour
             audioSource.clip = tryAgainAudio;
             audioSource.Play();
         }
+
+        // 2 second baad panel ko khud band karne ke liye
+        StartCoroutine(HideTryAgainAfterDelay(2f));
+    }
+
+    IEnumerator HideTryAgainAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        tryAgainPanel.SetActive(false);
     }
 
     // Ye function tab chale jab user Try Again panel ka "Close" button dabaye

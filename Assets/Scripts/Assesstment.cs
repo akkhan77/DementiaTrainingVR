@@ -20,7 +20,9 @@ public class Assesstment : MonoBehaviour
     public TextMeshProUGUI questionText;
     public TextMeshProUGUI featureHeadingText;
     public TextMeshProUGUI finalResultsText;
-
+    public GameObject nextPanel;
+    [Header("Retry Settings")]
+    private int resultRetryCount = 0;
 
     [Header("Audio")]
     public AudioSource guideAudioSource;
@@ -34,7 +36,9 @@ public class Assesstment : MonoBehaviour
     public Color selectedColor = Color.red;
     public Color defaultColor = Color.white;
 
-
+    [Header("Result Sounds")]
+    public AudioClip resultPositiveSound; // image_f64902.png (Question1_wrong.mp3 ya blinking sound)
+    public AudioClip resultNegativeSound;
     void Start()
     {
         StartAssessment();
@@ -47,24 +51,27 @@ public class Assesstment : MonoBehaviour
         assessmentPanel.SetActive(true);
         resultsPanel.SetActive(false);
 
+        // FIX: Saare question panels ko pehle band karein taake purana panel nazar na aaye
+        foreach (var qData in questions)
+        {
+            if (qData.questionPanel != null)
+                qData.questionPanel.SetActive(false);
+        }
+
         if (buttonsGroup != null) buttonsGroup.SetActive(false);
 
-        // Intro audio play karein
+        // Intro audio logic
         if (introVoice != null)
         {
             guideAudioSource.clip = introVoice;
             guideAudioSource.Play();
-
-            // Audio ki length ke mutabiq wait karein
             StartCoroutine(WaitAndStartFirstQuestion(introVoice.length));
         }
         else
         {
-            // Agar intro audio nahi hai to foran start karein
             UpdateUI();
         }
     }
-
     IEnumerator WaitAndStartFirstQuestion(float delay)
     {
         // Jitni der intro sound hai, utni der wait karein
@@ -104,6 +111,29 @@ public class Assesstment : MonoBehaviour
         else
         {
             ShowSummary();
+        }
+    }
+    public void OnResultButtonClick()
+    {
+        bool isPositive = CalculateSCAMResult();
+
+        if (isPositive && resultRetryCount < 1)
+        {
+            // Pehli baar Positive aaya: Retry karwaein
+            resultRetryCount++;
+            StartAssessment(); // Sab reset karke pehle sawal par le jaye ga
+        }
+        else
+        {
+            // Ya to result Negative hai, ya phir retry ke baad bhi Positive hai
+            // Dono suraton mein Aglay Panel par jayein
+            resultsPanel.SetActive(false);
+            if (nextPanel != null) {
+            nextPanel.SetActive(true);
+
+            }
+
+            Debug.Log("Proceeding to Next Panel...");
         }
     }
     public void OnButtonClick(int choice)
@@ -189,22 +219,61 @@ public class Assesstment : MonoBehaviour
             finalResultsText.text = "<align=center>¼¶¸Á (-) ÆÇÁ¤</align>";
     }
 
-    bool CalculateSCAMResult()
-    {
-        if (history.Count < 4) return false;
-        // Formula: (F1 AND F2) AND (F3 OR F4)
-        bool f1 = history[0].Contains("Yes");
-        bool f2 = history[1].Contains("Yes");
-        bool f3 = history[2].Contains("Yes");
-        bool f4 = history[3].Contains("Yes");
-        return (f1 && f2) && (f3 || f4);
-    }
+   
+        bool CalculateSCAMResult()
+        {
+            foreach (string entry in history)
+            {
+                if (entry.Contains("Yes")) return true;
+            }
+            return false; // Sab "No" hain to hi Negative aayega
+        }
+        //if (history.Count < 5) return false;
+
+        //// Index 0: Q1 (Box 1)
+        //// Index 1: Q2 (Box 1)
+        //// Index 2: Q3 (Inattention - Mandatory)
+        //// Index 3: Q4 (Box 2)
+        //// Index 4: Q5 (Box 2)
+
+        //bool q1 = history[0].Contains("Yes");
+        //bool q2 = history[1].Contains("Yes");
+        //bool q3 = history[2].Contains("Yes"); // II. Inattention
+        //bool q4 = history[3].Contains("Yes");
+        //bool q5 = history[4].Contains("Yes");
+
+        //// Logic: (Inattention) AND (Q1 OR Q2) AND (Q4 OR Q5)
+        //bool box1 = q1 || q2;
+        //bool box2 = q4 || q5;
+
+        //return q3 && box1 && box2;
+    
 
     void ShowSummary()
     {
         assessmentPanel.SetActive(false);
         resultsPanel.SetActive(true);
         RefreshResultUI();
+
+        // Result check karein aur sahi sound play karein
+        bool isPositive = CalculateSCAMResult();
+
+        if (isPositive)
+        {
+            if (resultPositiveSound != null)
+            {
+                guideAudioSource.Stop(); // Purani audio band karein
+                guideAudioSource.PlayOneShot(resultPositiveSound);
+            }
+        }
+        else
+        {
+            if (resultNegativeSound != null)
+            {
+                guideAudioSource.Stop(); // Purani audio band karein
+                guideAudioSource.PlayOneShot(resultNegativeSound);
+            }
+        }
     }
 
     string GetFeatureName(int index)
@@ -231,7 +300,7 @@ public class Assesstment : MonoBehaviour
     {
         tryAgainUI.SetActive(true);
         if (tryAgainVoice != null) guideAudioSource.PlayOneShot(tryAgainVoice);
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(1.5f);
         tryAgainUI.SetActive(false);
     }
 

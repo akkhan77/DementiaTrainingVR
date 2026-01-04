@@ -2,7 +2,7 @@ using TMPro;
 using System;
 using UnityEngine;
 using System.Collections;
-
+using Meta.WitAi.Dictation;
 public class AIFeedbackController : MonoBehaviour
 {
     [SerializeField] private GameObject _conversationCanvas;
@@ -12,7 +12,8 @@ public class AIFeedbackController : MonoBehaviour
     [SerializeField] private TMP_Text _conversationText;
     [SerializeField] private float _timeout = 6f;
     [SerializeField] private AudioSource _feedbackSource;
-
+    [SerializeField] private DictationService _dictationService; // Inspector mein SDK drag karne ke liye
+    private bool _didPlayerSpeak = false; // Ye track karne ke liye ke player bola ya nahi
     [Header("AiClips")]
     public AudioClip AiFeedbackClip01;
     public AudioClip AiFeedbackClip02;
@@ -24,6 +25,8 @@ public class AIFeedbackController : MonoBehaviour
     bool _isBlinking = false;
     public event Action OnConversationEnded;
     public GameObject ConversationCanvas => _conversationCanvas;
+
+
 
     public void SetConversationText(string text)
     {
@@ -62,12 +65,31 @@ public class AIFeedbackController : MonoBehaviour
         }
     }
 
+    //public void StartListening(AudioClip audioClip)
+    //{
+    //    _feedbackClip = audioClip;
+    //    timer = StartCoroutine(FeedbackTimer(_feedbackClip));
+    //}
     public void StartListening(AudioClip audioClip)
     {
         _feedbackClip = audioClip;
-        timer = StartCoroutine(FeedbackTimer(_feedbackClip));
-    }
+        _didPlayerSpeak = false; // Reset karein
 
+        if (_dictationService != null)
+            _dictationService.Activate(); // Mic sunna shuru karega
+
+        timer = StartCoroutine(FeedbackTimer(_feedbackClip)); // Purana timer
+    }
+    public void OnPlayerSpoke(string text)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            _didPlayerSpeak = true;
+            if (timer != null) StopCoroutine(timer); // Agar player bol para to timer rok dein
+            StopListening(); // Blinking aur icon band kar dein
+            Debug.Log("Player ne kaha: " + text);
+        }
+    }
     private void StopListening()
     {
         ToggleSpeakImages(false);
@@ -79,11 +101,15 @@ public class AIFeedbackController : MonoBehaviour
 
     IEnumerator FeedbackTimer(AudioClip audioClip)
     {
-        yield return new WaitForSeconds(_timeout);
-        _feedbackSource.PlayOneShot(audioClip);
-        yield return new WaitForSeconds(audioClip.length);
-        StopBlinking(false);
-        StopListening();
+        yield return new WaitForSeconds(_timeout); // 6 seconds wait
+
+        if (!_didPlayerSpeak) // Agar player abhi tak nahi bola
+        {
+            _feedbackSource.PlayOneShot(audioClip); // Play ai_feedback01.mp3
+            yield return new WaitForSeconds(audioClip.length);
+            StopBlinking(false);
+            StopListening();
+        }
     }
 
     private IEnumerator BlinkRoutine(float blinkSpeed, float minAlpha, float maxAlpha)

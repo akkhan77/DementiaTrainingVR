@@ -18,7 +18,18 @@ public class GameController : MonoBehaviour
     {
         
     }
+    private void Update()
+    {
+        AudioSource[] sources = FindObjectsOfType<AudioSource>();
 
+        foreach (AudioSource src in sources)
+        {
+            if (src.isPlaying && src.clip != null)
+            {
+                Debug.Log($"Playing Sound: {src.clip.name} | Object: {src.gameObject.name}");
+            }
+        }
+    }
     public void Quiz_Btn()
     {
         knIPPanel.SetActive(false);
