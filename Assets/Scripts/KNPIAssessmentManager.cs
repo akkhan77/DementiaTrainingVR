@@ -43,9 +43,11 @@ public class KNPIAssessmentManager : MonoBehaviour
     public AudioClip knpiCorrectSound; // Question2_correct.mp3
     public AudioClip knpiWrongSound;
     public GameObject knpiPanel;
+    public GameObject knpiPanel1;
     private Coroutine flowRoutine;
     private void Start()
     {
+        knpiPanel1.SetActive(true);
         StartKNPISequence();
        
     }
@@ -115,6 +117,8 @@ public class KNPIAssessmentManager : MonoBehaviour
             if (knpiCorrectSound != null) audioSource.PlayOneShot(knpiCorrectSound);
 
             resultPanel.SetActive(false);
+            knpiPanel.SetActive(false);
+            knpiPanel1.SetActive(false);
             if (nextPanel != null) nextPanel.SetActive(true);
         }
         else

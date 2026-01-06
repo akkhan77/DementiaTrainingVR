@@ -19,7 +19,7 @@ MonoBehaviour:
     name: hospitaltraining
     id: 2762698197402246
     lang: en
-    isPrivate: 1
+    isPrivate: 0
     createdAt: 2025-12-30T20:28:20-0800
     trainingStatus: 3
     lastTrainDuration: 0
@@ -557,7 +557,7 @@ MonoBehaviour:
   isDemoOnly: 0
   useIntentAttributes: 1
   useConduit: 1
-  _manifestLocalPath: 
+  _manifestLocalPath: ConduitManifest-abc8efad-225a-48da-8068-a8d012934724.json
   excludedAssemblies:
   - Oculus.Voice.Demo, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   - Meta.WitAi.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null

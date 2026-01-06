@@ -57,7 +57,10 @@ public class Assesstment : MonoBehaviour
             if (qData.questionPanel != null)
                 qData.questionPanel.SetActive(false);
         }
-
+        if (questions.Count > 0 && questions[0].questionPanel != null)
+        {
+            questions[0].questionPanel.SetActive(true);
+        }
         if (buttonsGroup != null) buttonsGroup.SetActive(false);
 
         // Intro audio logic

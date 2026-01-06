@@ -147,9 +147,12 @@ public class EpisodeOneFlowController : MonoBehaviour
     }
     private void Introduction()
     {
+        Debug.Log("san lksa0");
         _aiFeedback.ConversationCanvas.SetActive(true);
-        _aiFeedback.SetConversationText("안녕하세요. 담당 간호사OOO입니다. 성함이 어떻게되세요?");
-        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip01);
+        string introText = "안녕하세요. 담당 간호사 OOO입니다. 성함이 어떻게 되세요?";
+        _aiFeedback.SetConversationText(introText);
+
+        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip01, introText);
         _aiFeedback.StartBlinking();
     }
 

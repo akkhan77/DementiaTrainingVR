@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 public class EpisodeManager : MonoBehaviour
 {
+    public static bool isGameComplete = false;
     [Header("UI Buttons")]
     [SerializeField] private GameObject _episodeMenuPanel;
     [SerializeField] private Button _episodeOneBtn;
@@ -24,6 +25,7 @@ public class EpisodeManager : MonoBehaviour
     public GameObject Player => _player;
     void Start()
     {
+        isGameComplete = false;
         _episodeOneBtn.onClick.AddListener(() => EpisodeOne());
         _episodeTwoBtn.onClick.AddListener(() => EpisodeTwo());
         _episodeThreeBtn.onClick.AddListener(() => EpisodeThree());
@@ -33,9 +35,22 @@ public class EpisodeManager : MonoBehaviour
 
     private void EpisodeOne()
     {
-        _player.transform.position = _playerPositionEpisodeOne;
-        _episodeMenuPanel.SetActive(false);
-        _episodeOne.ChangeState(Episode1State.HandSanitizer, 1f);
+        if (isGameComplete)
+        {
+            // AGAR PORA KHAIL LIYA HAI: To Nurse aur Clips (11, 12) chalao
+            if (GameController.instance.episodeSelectionPanel != null) GameController.instance.episodeSelectionPanel.SetActive(false);
+            if (GameController.instance.guideNurseCharacter != null) GameController.instance.guideNurseCharacter.SetActive(true);
+
+        GameController.instance.EndGame();
+
+
+        }
+        else
+        {
+            _player.transform.position = _playerPositionEpisodeOne;
+            _episodeMenuPanel.SetActive(false);
+            _episodeOne.ChangeState(Episode1State.HandSanitizer, 1f);
+        }
     }
 
     private void EpisodeTwo()

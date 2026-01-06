@@ -184,6 +184,7 @@ public class PatientController : MonoBehaviour
         _HipTargetTransform.DOLocalRotate(new Vector3(0, -3, 0), 1f).SetEase(Ease.OutExpo);
 
         _patientFacialController.SetExpression(ExpressionType.Aggressive);
+        _aiFeedback.ConversationCanvas.SetActive(true);
         _aiFeedback.SetConversationText("대상자의 증상 관찰 및 환자행동을확인하세요.");
         StartCoroutine(Confusion());
     }
@@ -222,9 +223,11 @@ public class PatientController : MonoBehaviour
         _isTalking = false;
         yield return new WaitForSeconds(2f);
         Debug.Log("55555");
+        _aiFeedback.ConversationCanvas.SetActive(true);
+        string stage2Text = "집에 가고 싶으신 거군요.\n그 전에, 잠시\n앉아서 저와 잠깐 이야기 좀 나눠주시겠어요?";
+        _aiFeedback.SetConversationText(stage2Text);
 
-        _aiFeedback.SetConversationText("집에 가고 싶으신 거군요.\n그 전에, 잠시\n앉아서 저와 잠깐 이야기 좀 나눠주시겠어요?");
-        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip02);
+        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip02, stage2Text);
         _aiFeedback.StartBlinking();
         yield return new WaitForSeconds(8f);
 
@@ -247,6 +250,7 @@ public class PatientController : MonoBehaviour
         gameObject.transform.DORotateQuaternion(_patientSitTransform.rotation, 1.0f).SetEase(Ease.OutExpo);
 
         _animator.SetBool("Walk", false); //Play Sit Animation
+        _aiFeedback.ConversationCanvas.SetActive(true);
         _aiFeedback.SetConversationText("대상자의 증상 관찰 및환자 행동을 확인하세요.");
         StartCoroutine(Calm());
     }
@@ -264,8 +268,10 @@ public class PatientController : MonoBehaviour
         HandlePatientNeck(false);
         _isTalking = false;
         yield return new WaitForSeconds(2f);
-        _aiFeedback.SetConversationText("따님께서회사에서 퇴근하면 저녁에 병원으로 오신다고 전화왔었어요.");
-        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip03);
+        _aiFeedback.ConversationCanvas.SetActive(true);
+        string text3 = "따님께서 회사에서 퇴근하면 저녁에 병원으로 오신다고 전화왔었어요.";
+        _aiFeedback.SetConversationText(text3);
+        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip03, text3);
         _aiFeedback.StartBlinking();
     }
 

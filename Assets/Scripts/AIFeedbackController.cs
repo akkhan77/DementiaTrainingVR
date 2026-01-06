@@ -3,8 +3,10 @@ using System;
 using UnityEngine;
 using System.Collections;
 using Meta.WitAi.Dictation;
+using UnityEngine.Android;
 public class AIFeedbackController : MonoBehaviour
 {
+    public static AIFeedbackController instance;
     [SerializeField] private GameObject _conversationCanvas;
     [SerializeField] private CanvasGroup _conversationIcon;
     [SerializeField] private GameObject _speakImg;
@@ -25,7 +27,19 @@ public class AIFeedbackController : MonoBehaviour
     bool _isBlinking = false;
     public event Action OnConversationEnded;
     public GameObject ConversationCanvas => _conversationCanvas;
+    private string _currentDialogueText;
+    public System.Action OnAudioFinished;
 
+    private void Start()
+    {
+        instance = this;
+        // Check karein ke kya permission pehle se hai?
+        if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
+        {
+            // Agar nahi hai, to Quest ke andar pop-up dikhayein
+            Permission.RequestUserPermission(Permission.Microphone);
+        }
+    }
 
 
     public void SetConversationText(string text)
@@ -70,24 +84,40 @@ public class AIFeedbackController : MonoBehaviour
     //    _feedbackClip = audioClip;
     //    timer = StartCoroutine(FeedbackTimer(_feedbackClip));
     //}
-    public void StartListening(AudioClip audioClip)
+    //public void StartListening(AudioClip feedbackClip, string dialogue)
+    //{
+    //    _currentDialogueText = dialogue; // Is stage ka specific text save karlein
+    //    _didPlayerSpeak = false;
+
+    //    if (_dictationService != null)
+    //        _dictationService.Activate();
+
+    //    timer = StartCoroutine(FeedbackTimer(feedbackClip));
+    //}
+    public void StartListening(AudioClip feedbackClip, string dialogue = "")
     {
-        _feedbackClip = audioClip;
-        _didPlayerSpeak = false; // Reset karein
+        _currentDialogueText = dialogue;
+        _didPlayerSpeak = false;
 
         if (_dictationService != null)
-            _dictationService.Activate(); // Mic sunna shuru karega
+            _dictationService.Activate();
 
-        timer = StartCoroutine(FeedbackTimer(_feedbackClip)); // Purana timer
+        timer = StartCoroutine(FeedbackTimer(feedbackClip));
     }
     public void OnPlayerSpoke(string text)
     {
         if (!string.IsNullOrEmpty(text))
         {
             _didPlayerSpeak = true;
-            if (timer != null) StopCoroutine(timer); // Agar player bol para to timer rok dein
-            StopListening(); // Blinking aur icon band kar dein
-            Debug.Log("Player ne kaha: " + text);
+            if (timer != null) StopCoroutine(timer);
+
+            // Sirf wahi text dikhayega jo humne StartListening mein bheja tha
+            SetConversationText(_currentDialogueText);
+
+            StopListening();
+
+            // Visuals band karne ke liye call
+            FindObjectOfType<GameController>().StopStage1_4Visuals();
         }
     }
     private void StopListening()
@@ -98,16 +128,20 @@ public class AIFeedbackController : MonoBehaviour
         SetConversationText(" ");
         OnConversationEnded?.Invoke();
     }
-
-    IEnumerator FeedbackTimer(AudioClip audioClip)
+    private IEnumerator FeedbackTimer(AudioClip clip)
     {
-        yield return new WaitForSeconds(_timeout); // 6 seconds wait
+        yield return new WaitForSeconds(8f); // 8 seconds ka wait
 
-        if (!_didPlayerSpeak) // Agar player abhi tak nahi bola
+        if (!_didPlayerSpeak)
         {
-            _feedbackSource.PlayOneShot(audioClip); // Play ai_feedback01.mp3
-            yield return new WaitForSeconds(audioClip.length);
-            StopBlinking(false);
+            _feedbackSource.clip = clip;
+            _feedbackSource.Play();
+
+            // Audio khatam hone ka intezar karein
+            yield return new WaitWhile(() => _feedbackSource.isPlaying);
+
+            // Signal bhejein ke audio khatam ho gayi
+            OnAudioFinished?.Invoke();
             StopListening();
         }
     }
