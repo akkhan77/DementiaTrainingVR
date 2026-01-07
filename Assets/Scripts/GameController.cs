@@ -7,6 +7,8 @@ public class GameController : MonoBehaviour
     public static GameController instance;
     public enum InterventionStage { Clock, Booklet, Photo, VideoCall, Music, Medicine }
     public InterventionStage currentStage = InterventionStage.Clock;
+
+    public GameObject learning_Panel;
     // Stage 1-1 State Variables
     private bool handSanitized = false;
     public Animator handsnitizerAnim;
@@ -112,6 +114,11 @@ public class GameController : MonoBehaviour
             UpdateAllVitals();
             timer = 0; // Reset timer
         }
+    }
+    public void Learning_Btn()
+    {
+        learning_Panel.SetActive(true);
+        episodeSelectionPanel.SetActive(false);
     }
 
     void UpdateAllVitals()

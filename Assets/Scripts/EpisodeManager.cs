@@ -4,6 +4,7 @@ using UnityEngine.UI;
 public class EpisodeManager : MonoBehaviour
 {
     public static bool isGameComplete = false;
+    public GameObject learning1;
     [Header("UI Buttons")]
     [SerializeField] private GameObject _episodeMenuPanel;
     [SerializeField] private Button _episodeOneBtn;
@@ -47,10 +48,21 @@ public class EpisodeManager : MonoBehaviour
         }
         else
         {
-            _player.transform.position = _playerPositionEpisodeOne;
-            _episodeMenuPanel.SetActive(false);
-            _episodeOne.ChangeState(Episode1State.HandSanitizer, 1f);
+            GameController.instance.learning_Panel.SetActive(true);
+            learning1.SetActive(true);
+            GameController.instance.episodeSelectionPanel.SetActive(false);
+               
+
         }
+    }
+
+    public void HandWork()
+    {
+        _player.transform.position = _playerPositionEpisodeOne;
+        GameController.instance.learning_Panel.SetActive(false);
+
+        _episodeMenuPanel.SetActive(false);
+        _episodeOne.ChangeState(Episode1State.HandSanitizer, 1f);
     }
 
     private void EpisodeTwo()
