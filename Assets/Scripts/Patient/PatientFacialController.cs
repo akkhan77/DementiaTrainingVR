@@ -8,7 +8,9 @@ public enum ExpressionType
     Neutral,
     Sleeping,
     Aggressive,
-    Confusion
+    Confusion,
+    Happy // <-- Ye add karein
+
 }
 
 [RequireComponent(typeof(SkinnedMeshRenderer))]

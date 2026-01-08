@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using System.Collections;
 using Meta.WitAi.Dictation;
+using Oculus;
 using UnityEngine.Android;
 public class AIFeedbackController : MonoBehaviour
 {
@@ -34,11 +35,24 @@ public class AIFeedbackController : MonoBehaviour
     {
         instance = this;
         // Check karein ke kya permission pehle se hai?
+        instance = this;
+
+        // Permission check pehle se mojud hai
         if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
         {
-            // Agar nahi hai, to Quest ke andar pop-up dikhayein
             Permission.RequestUserPermission(Permission.Microphone);
         }
+
+        // PASKA ILAJ: Code se event link karna
+        if (_dictationService != null)
+        {
+            // Ye line Inspector ke reset hone ka masla khatam kar degi
+            _dictationService.DictationEvents.OnFullTranscription.AddListener(OnPlayerSpoke);
+        }
+    }
+    void Update()
+    {
+       
     }
 
 
@@ -108,16 +122,29 @@ public class AIFeedbackController : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(text))
         {
-            _didPlayerSpeak = true;
-            if (timer != null) StopCoroutine(timer);
+            // 1. Jo user ne bola (text) aur jo bolna tha (_currentDialogueText) 
+            // dono se faltu spaces aur dots (.) hata dein taake match asan ho.
+            string spoken = text.Replace(" ", "").Replace(".", "").ToLower();
+            string target = _currentDialogueText.Replace(" ", "").Replace(".", "").ToLower();
 
-            // Sirf wahi text dikhayega jo humne StartListening mein bheja tha
-            SetConversationText(_currentDialogueText);
+            // 2. Ab check karein ke kya user ki baat mein wo sentence mojud hai?
+            if (spoken.Contains(target) || target.Contains(spoken))
+            {
+                Debug.Log("Sahi bola! Agla step shuru...");
+                _didPlayerSpeak = true;
 
-            StopListening();
+                if (timer != null) StopCoroutine(timer);
+                SetConversationText(_currentDialogueText);
+                StopListening();
 
-            // Visuals band karne ke liye call
-            FindObjectOfType<GameController>().StopStage1_4Visuals();
+                // Sahi bolne par visuals band kar dein
+                //FindObjectOfType<GameController>().StopStage1_4Visuals();
+            }
+            else
+            {
+                Debug.Log("Ghalat bola. User ne kaha: " + text);
+                // Yahan aap user ko dobara bolne ka keh sakte hain
+            }
         }
     }
     private void StopListening()
@@ -127,10 +154,11 @@ public class AIFeedbackController : MonoBehaviour
         StopBlinking(false);
         SetConversationText(" ");
         OnConversationEnded?.Invoke();
+
     }
     private IEnumerator FeedbackTimer(AudioClip clip)
     {
-        yield return new WaitForSeconds(8f); // 8 seconds ka wait
+        yield return new WaitForSeconds(5f); // 8 seconds ka wait
 
         if (!_didPlayerSpeak)
         {

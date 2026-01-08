@@ -1,5 +1,18 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-2992482448177801532
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1c2918ba0e7451694416d42d69e0944, type: 3}
+  m_Name: WitComposerData
+  m_EditorClassIdentifier: Meta.Wit.Composer::Meta.WitAi.Composer.Data.Info.WitComposerData
+  canvases: []
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12,23 +25,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae5a46bda3295124c99b0e6537ac7252, type: 3}
   m_Name: CustomNlp
   m_EditorClassIdentifier: Meta.WitAi::Meta.WitAi.Data.Configuration.WitConfiguration
-  _clientAccessToken: H4ANFKQUDK6ME7KBCRKP2YZGR6YL6PUE
+  _clientAccessToken: LW7RCVJXJ2HO6TPXB7WPPPRRWTVB6UUE
   editorVersionTag: 
   buildVersionTag: 
   _appInfo:
-    name: hospitaltraining
-    id: 2762698197402246
-    lang: en
-    isPrivate: 0
-    createdAt: 2025-12-30T20:28:20-0800
-    trainingStatus: 3
+    name: bsdp
+    id: 26059103883681750
+    lang: ko
+    isPrivate: 1
+    createdAt: 2026-01-08T02:48:07-0800
+    trainingStatus: 1
     lastTrainDuration: 0
     lastTrainedAt: 1969-12-31T16:00:00-0800
-    nextTrainAt: 2026-01-04T03:50:07-0800
-    intents:
-    - id: 1990171104883439
-      name: talkwithpatient
-      entities: []
+    nextTrainAt: 1969-12-31T16:00:00-0800
+    intents: []
     entities: []
     traits: []
     versionTags: []
@@ -539,8 +549,8 @@ MonoBehaviour:
       - phoneme_events
       - word_events
   _configData:
-  - {fileID: 2900891940850123080}
-  _configurationId: d7d0df4c-bddc-4a03-a372-e6457cf9ae15
+  - {fileID: -2992482448177801532}
+  _configurationId: 68b1d864-75d2-40f9-8da0-1a161a4e2f15
   _requestType: 0
   _requestTimeoutMs: 10000
   endpointConfiguration:
@@ -557,21 +567,8 @@ MonoBehaviour:
   isDemoOnly: 0
   useIntentAttributes: 1
   useConduit: 1
-  _manifestLocalPath: ConduitManifest-abc8efad-225a-48da-8068-a8d012934724.json
+  _manifestLocalPath: ConduitManifest-c10cf2c4-58f0-4955-af57-02d5c882025e.json
   excludedAssemblies:
   - Oculus.Voice.Demo, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   - Meta.WitAi.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   relaxedResolution: 0
---- !u!114 &2900891940850123080
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d1c2918ba0e7451694416d42d69e0944, type: 3}
-  m_Name: WitComposerData
-  m_EditorClassIdentifier: Meta.Wit.Composer::Meta.WitAi.Composer.Data.Info.WitComposerData
-  canvases: []

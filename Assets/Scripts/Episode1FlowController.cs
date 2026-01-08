@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-
+using Oculus.Voice; // Top par add karein
 public enum Episode1State
 {
     HandSanitizer,
@@ -19,6 +19,7 @@ public class EpisodeOneFlowController : MonoBehaviour
     [SerializeField] private Episode1State _currentState;
     public GameObject assesstmentEnable;
     public GameObject SpeakPanel;
+ 
 
     [Header("References")]
     [SerializeField] private EpisodeManager _episodeManager;
@@ -28,7 +29,7 @@ public class EpisodeOneFlowController : MonoBehaviour
     [SerializeField] private Vector3 _playerEpisodeOneAssessmentPosition = new();
     [SerializeField] private Vector3 _playerPositionEpisodeOne = new ();
     [SerializeField] private Vector3 startPosition = new ();
-
+    [SerializeField] private AppVoiceExperience _voiceExperience;
     [SerializeField] private OutlineBlinker[] _outlineBlinkers;
     public GameObject[] messages;
 
@@ -47,8 +48,14 @@ public class EpisodeOneFlowController : MonoBehaviour
     }
     private void Start()
     {
+        //foreach (var device in Microphone.devices)
+        //{
+        //    Debug.Log("<color=orange>Found Mic: </color>" + device);
+        //}
         instance = this;
-    }
+    //    Inspector ki zaroorat nahi, ye line khud hi event connect kar degi
+    _voiceExperience.VoiceEvents.OnFullTranscription.AddListener(TestVoiceTranscription);
+}
     private void GoToState()
     {
         switch (_currentState)
@@ -68,6 +75,8 @@ public class EpisodeOneFlowController : MonoBehaviour
                 break;
 
             case Episode1State.PatientAggression:
+                _aiFeedback.ConversationCanvas.SetActive(true);
+
                 PatientAggression();
                 Debug.Log("Episode State: " + _currentState);
                 break;
@@ -154,8 +163,15 @@ public class EpisodeOneFlowController : MonoBehaviour
 
         _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip01, introText);
         _aiFeedback.StartBlinking();
+        //PatientAggression();
     }
+    public void TestVoiceTranscription(string text)
+    {
+        Debug.Log("Maine Suna: " + text);
 
+        if (text.ToLower().Contains("attack"))
+        { Debug.Log("Maine Sunsssa: " + text); }
+        }
     private void PatientAggression()
     {
         _patientController.Aggressive();

@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "com.meta.xr.sdk.voice": "83.0.1",
-    "com.meta.xr.sdk.voice.dictation": "64.0.0",
     "com.readyplayerme.core": "https://github.com/readyplayerme/rpm-unity-sdk-core.git",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.ai.navigation": "2.0.9",

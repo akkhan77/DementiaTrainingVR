@@ -13,20 +13,20 @@ public class StageManager : MonoBehaviour
         _aiFeedbackController.OnConversationEnded += ManageIntroductionStage;
     }
 
-    public void ManageHandSanitizerStage()
-    {
-        _HandSanitizerIndex++;
-        if (_HandSanitizerIndex == 2)
-        {
-            _episode1FlowController.ChangeState(Episode1State.Introduction);
-            _patientController.FacialController.SetExpression(ExpressionType.Neutral);
-            Debug.Log("First time picking up hand sanitizer.");
-        }
-        else
-        {
-            Debug.Log("Picked up hand sanitizer again. Count: " + _HandSanitizerIndex);
-        }
-    }
+    //public void ManageHandSanitizerStage()
+    //{
+    //    _HandSanitizerIndex++;
+    //    if (_HandSanitizerIndex == 2)
+    //    {
+    //        _episode1FlowController.ChangeState(Episode1State.Introduction);
+    //        _patientController.FacialController.SetExpression(ExpressionType.Neutral);
+    //        Debug.Log("First time picking up hand sanitizer.");
+    //    }
+    //    else
+    //    {
+    //        Debug.Log("Picked up hand sanitizer again. Count: " + _HandSanitizerIndex);
+    //    }
+    //}
 
     private void ManageIntroductionStage()
     {
@@ -34,7 +34,8 @@ public class StageManager : MonoBehaviour
         {
             _episode1FlowController.ChangeState(Episode1State.PatientAggression, 1f);
         }
-        else if (_episode1FlowController.CurrentState == Episode1State.PatientAggression)
+        else
+        if (_episode1FlowController.CurrentState == Episode1State.PatientAggression)
         {
             _episode1FlowController.ChangeState(Episode1State.PatientCalm, 1f);
         }

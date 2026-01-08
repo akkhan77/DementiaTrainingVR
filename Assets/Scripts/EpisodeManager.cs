@@ -43,8 +43,6 @@ public class EpisodeManager : MonoBehaviour
             if (GameController.instance.guideNurseCharacter != null) GameController.instance.guideNurseCharacter.SetActive(true);
 
         GameController.instance.EndGame();
-
-
         }
         else
         {

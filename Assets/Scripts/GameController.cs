@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
@@ -65,7 +66,7 @@ public class GameController : MonoBehaviour
     public AudioClip patientClip15; // "그럼 지금은 사진보면서 기다려봐요." (Let's wait while looking at photo)
     public AudioClip patientClip16;
     public AudioSource PatientAudio;
-
+    public PatientFacialController _patientFacialController;
     [Header("End Scenarios & Guide")]
     public GameObject guideNurseCharacter; // Inspector mein Guide Nurse ka 3D model/prefab yahan drag karein
     public GameObject episodeSelectionPanel;
@@ -81,6 +82,10 @@ public class GameController : MonoBehaviour
     public TextMeshProUGUI rrText;   // Resp Rate
     public TextMeshProUGUI btText;   // Temperature
     public TextMeshProUGUI spo2Text; // Oxygen
+    [Header("Patient Reference")]
+    public PatientController patientScript;
+    public Transform clockLookAnchor;
+    public GameObject mobilemodel;
     void Awake()
     {
         if (photoButton) photoButton.SetActive(false);
@@ -164,11 +169,14 @@ public class GameController : MonoBehaviour
     }
     private IEnumerator TriggerPatientFinalResponse()
     {
+        patientScript.LookAtTargetByIndex(0);
+
+       
         // 1. Medicine Button band karein
         if (medicineButton != null) medicineButton.SetActive(false);
 
         yield return new WaitForSeconds(1.0f);
-
+        patientScript._isTalking = true;
         // 2. Clip 15 Play karein
         AIFeedbackController.instance.ConversationCanvas.SetActive(true);
         AIFeedbackController.instance.SetConversationText("그럼 지금은 사진보면서 기다려봐요.");
@@ -210,7 +218,12 @@ public class GameController : MonoBehaviour
         if (episodeSelectionPanel != null)
         {
             episodeSelectionPanel.SetActive(true);
-            Debug.Log("Clip 16 Finished: Opening Episode Panel now.");
+            patientScript._isTalking = false;
+            patientScript._animator.Play("LayingIdle");
+            patientScript.ResetPatient();
+            patientScript.HandlePatientNeck(false);
+
+            // Debug.Log("Clip 16 Finished: Opening Episode Panel now.");
         }
     }
     private IEnumerator ActivateNextStepWithDelay(float delay)
@@ -221,16 +234,22 @@ public class GameController : MonoBehaviour
         {
             case InterventionStage.Clock:
                 currentStage = InterventionStage.Booklet;
+                patientScript.LookAtTargetByIndex(3);
                 StartStage1_5Blinking(); // Model blink shuru
                 break;
 
             case InterventionStage.Booklet:
                 currentStage = InterventionStage.Photo;
+                mobilemodel.SetActive(true);
+        _patientFacialController.SetExpression(ExpressionType.Happy);
+
+                patientScript.LookAtTargetByIndex(4);
                 if (photoButton) photoButton.SetActive(true); // Family Photo button ON
                 break;
 
             case InterventionStage.Photo:
                 currentStage = InterventionStage.VideoCall;
+         
                 if (photoButton) photoButton.SetActive(false); // Purana band
                 if (videoCallButton) videoCallButton.SetActive(true); // Naya ON
                 break;
@@ -243,11 +262,15 @@ public class GameController : MonoBehaviour
 
             case InterventionStage.Music:
                 currentStage = InterventionStage.Medicine;
+                patientScript.LookAtTargetByIndex(3);
+                mobilemodel.SetActive(false);
                 if (musicButton) musicButton.SetActive(false);
                 if (medicineButton) medicineButton.SetActive(true);
                 break;
         }
     }
+
+
     // Naya helper function buttons manage karne ke liye
     private void EnableNextButton(Outline nextOutline)
     {
@@ -263,10 +286,12 @@ public class GameController : MonoBehaviour
     {
         if (currentStage == InterventionStage.Photo)
         {
+
             AIFeedbackController.instance.ConversationCanvas.SetActive(true);
             string txt = "서영호님, 따님을 기다리면서 가족사진을 볼까요?";
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
+            photoButton.GetComponent<Button>().interactable = false;
 
             AIFeedbackController.instance.StartListening(ai_feedback06, txt);
         }
@@ -282,6 +307,7 @@ public class GameController : MonoBehaviour
             AIFeedbackController.instance.StartBlinking();
 
             AIFeedbackController.instance.StartListening(ai_feedback07, txt);
+            videoCallButton.GetComponent<Button>().interactable = false;
         }
     }
 
@@ -293,6 +319,7 @@ public class GameController : MonoBehaviour
             string txt = "좋아하는 노래를 들으실까요?";
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
+            musicButton.GetComponent<Button>().interactable = false;
 
             AIFeedbackController.instance.StartListening(ai_feedback08, txt);
         }
@@ -430,6 +457,7 @@ public class GameController : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // 1. Clip 11: Nurse Question (Debriefing)
+   
         AIFeedbackController.instance.ConversationCanvas.SetActive(true);
         AIFeedbackController.instance.SetConversationText("네 가지 상황 중 가장 어려웠던 점 하나만 말해주세요.");
         AIFeedbackController.instance.StartBlinking();
@@ -479,47 +507,6 @@ public class GameController : MonoBehaviour
         if (clockOutline) clockOutline.OutlineWidth = 0f;
         if (calendarOutline) calendarOutline.OutlineWidth = 0f;
     }
-
-    //// Update is called once per frame
-    //void Update()
-    //{
-    //    Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-    //    RaycastHit hit;
-
-    //    if (Physics.Raycast(ray, out hit, 5f))
-    //    {
-    //        GameObject currentObject = hit.collider.gameObject;
-
-    //        // Agar naya object hit hua hai
-    //        if (currentObject != lastHighlightedObject)
-    //        {
-    //            ResetHighlight(); // Purane object ka rang wapis sahi karein
-
-    //            lastHighlightedObject = currentObject;
-
-    //            if (currentObject.GetComponent<Renderer>() != null)
-    //            {
-    //                originalColor = currentObject.GetComponent<Renderer>().material.color;
-    //                currentObject.GetComponent<Renderer>().material.color = Color.yellow; // Highlight color
-    //            }
-    //        }
-
-    //        Debug.Log("Hit: " + hit.collider.name + " | Layer: " + LayerMask.LayerToName(hit.collider.gameObject.layer));
-    //    }
-    //    else
-    //    {
-    //        ResetHighlight();
-    //    }
-    //}
-
-    //void ResetHighlight()
-    //{
-    //    if (lastHighlightedObject != null)
-    //    {
-    //        lastHighlightedObject.GetComponent<Renderer>().material.color = originalColor;
-    //        lastHighlightedObject = null;
-    //    }
-    //}
 
     public void OnHandSanitizerClick()
     {
@@ -668,10 +655,22 @@ public class GameController : MonoBehaviour
     }
     private void StartStage1_4Blinking()
     {
-        isStage1_4Ready = true; // Ab click detect ho sakega
-        StartCoroutine(ClockCalendarBlinkRoutine()); // Blinking shuru
-    }
+        isStage1_4Ready = true;
 
-}
+        if (patientScript != null && clockLookAnchor != null)
+        {
+            // Pehle gardan ka purana player focus khatam karein
+            patientScript.HandlePatientNeck(false);
+
+            // Sit animation play karein
+            //patientScript.animator.Play("Sit");
+
+            // IMPORTANT: Patient ko sit position par le jayen aur gardan anchor ki taraf murein
+            patientScript.LookAtTarget();
+          
+        }
+        StartCoroutine(ClockCalendarBlinkRoutine());
+    }
+    }
 
 

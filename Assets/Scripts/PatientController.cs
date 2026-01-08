@@ -3,11 +3,12 @@ using DG.Tweening;
 using UnityEngine.AI;
 using System.Collections;
 using UnityEngine.Animations.Rigging;
+using System;
 
 public class PatientController : MonoBehaviour
 {
     [SerializeField] private Transform _XrRigTransform;
-    [SerializeField] private Animator _animator;
+    [SerializeField] public Animator _animator;
     [SerializeField] private Transform _patientLyingTransform;
     [SerializeField] private Transform _patientSitTransform;
     [SerializeField] private SkinnedMeshRenderer _faceRenderer;
@@ -40,7 +41,7 @@ public class PatientController : MonoBehaviour
 
     int _currentIndex = 0;
     bool _isWandering = false;
-    private bool _isTalking = false;
+    public bool _isTalking = false;
     private bool _blink = false;
     private bool _idleAnim = false;
 
@@ -52,8 +53,14 @@ public class PatientController : MonoBehaviour
     private bool _hasArrived;
     private Transform _currentTarget;
 
+    public Animator animator; // Inspector mein Animator assign karein
+    public Vector3 newPosition = new Vector3(5, 0, 0); // Jahan move karna hai
+    public Vector3 newRotation = new Vector3(0, 90, 0); // Jitna rotate karna ha
+    private bool _isLookingAtObject = false;
     public PatientFacialController FacialController => _patientFacialController;
-
+    [Header("Look At Clock Settings")]
+    [SerializeField] private MultiAimConstraint _neckAimConstraint;
+    [SerializeField] private Transform _clockTransform, _hospitalreg, _familyphoto;
     void Start()
     {
         _mouthBlendShapeIndex = _faceRenderer.sharedMesh.GetBlendShapeIndex("talk");
@@ -65,8 +72,10 @@ public class PatientController : MonoBehaviour
         HandleTalking();
         HandleWalking();
         HandleBlinking();
+        //LookAtClock(true);
 
-        if (_idleAnim)
+
+        if (_idleAnim ) // Sirf tab FacePlayer chale jab hum kisi object ko na dekh rahe hon
         {
             HandleReachedDestination();
         }
@@ -179,69 +188,123 @@ public class PatientController : MonoBehaviour
     [ContextMenu("Make Aggressive")]
     public void Aggressive()
     {
+
         _blink = true;
-        _spineTargetTransform.DOLocalRotate(new Vector3(70, -22, 0), 1f).SetEase(Ease.OutExpo);
-        _HipTargetTransform.DOLocalRotate(new Vector3(0, -3, 0), 1f).SetEase(Ease.OutExpo);
+        //_spineTargetTransform.DOLocalRotate(new Vector3(70, -22, 0), 1f).SetEase(Ease.OutExpo);
+        //_HipTargetTransform.DOLocalRotate(new Vector3(0, -3, 0), 1f).SetEase(Ease.OutExpo);
+        _aiFeedback.ConversationCanvas.SetActive(false);
 
         _patientFacialController.SetExpression(ExpressionType.Aggressive);
-        _aiFeedback.ConversationCanvas.SetActive(true);
-        _aiFeedback.SetConversationText("대상자의 증상 관찰 및 환자행동을확인하세요.");
+    
         StartCoroutine(Confusion());
     }
 
     private IEnumerator Confusion()
     {
-        yield return new WaitForSeconds(2f);
-        gameObject.transform.DORotateQuaternion(_patientSitTransform.rotation, 1.0f).SetEase(Ease.OutExpo);
-        yield return new WaitForSeconds(0.18f);
-        Debug.Log("11111");
-        _patientFacialController.SetExpression(ExpressionType.Confusion);
-        _spineTargetTransform.localRotation = Quaternion.Euler(0, 0, 0);
-        _HipTargetTransform.localRotation = Quaternion.Euler(0, 0, 0);
+        transform.position = newPosition;
 
+        transform.rotation = Quaternion.Euler(newRotation);
+
+        DisablePatientWires();
+
+        if (_agent != null)
+
+        {
+
+            _agent.enabled = false; // Pehle disable karein
+
+            _agent.Warp(transform.position); // Ye agent ko current position par 'snap' kar deta hai
+
+            //_agent.enabled = true; // Phir enable karein
+
+        }
+
+        // 2. Wakeup Animation chalayein
+
+        _animator.Play("wakeup");
+
+        // 3. Thoda wait karein taake animation mehsoos ho (e.g., 2 seconds)
+
+        yield return new WaitForSeconds(18.10f);
+        HandleSuitCase(false);
+        yield return new WaitForSeconds(1.11f);
         _agent.enabled = true;
         DisablePatientWires();
         _isWandering = true;
         _animator.SetBool("Walk", true);
-
-        HandleSuitCase(false);
+        yield return new WaitForSeconds(1f);
+        StartCoroutine(HitAnimationSequence());
+        yield return new WaitForSeconds(4f);
+        _animator.SetBool("hit", false);
         yield return new WaitForSeconds(5f);
         Debug.Log("22222");
-
         _idleAnim = true;
         GoToPosition(_XrRigTransform);
         yield return new WaitForSeconds(3f);
         Debug.Log("33333");
-
         HandlePatientNeck(true);
+        LookAtTargetByIndex(0);
         _isTalking = true;
+        _aiFeedback.ConversationCanvas.SetActive(true);
+        _aiFeedback.SetConversationText("대상자의 증상 관찰 및 환자행동을확인하세요.");
+        _patientFacialController.SetExpression(ExpressionType.Aggressive);
         _patientAudioSource.clip = _patientAngryClip;
         _patientAudioSource.Play();
         yield return new WaitForSeconds(_patientAngryClip.length);
-
         Debug.Log("44444");
         _isTalking = false;
         yield return new WaitForSeconds(2f);
         Debug.Log("55555");
-        _aiFeedback.ConversationCanvas.SetActive(true);
-        string stage2Text = "집에 가고 싶으신 거군요.\n그 전에, 잠시\n앉아서 저와 잠깐 이야기 좀 나눠주시겠어요?";
-        _aiFeedback.SetConversationText(stage2Text);
-
-        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip02, stage2Text);
+        _aiFeedback.SetConversationText("집에 가고 싶으신 거군요.\n그 전에, 잠시\n앉아서 저와 잠깐 이야기 좀 나눠주시겠어요?");
+        _aiFeedback.StartListening(_aiFeedback.AiFeedbackClip02);
         _aiFeedback.StartBlinking();
-        yield return new WaitForSeconds(8f);
-
+        yield return new WaitForSeconds(2f);
+        Debug.Log("66666");
         HandlePatientNeck(false);
         _animator.SetBool("Idle", false);
         _idleAnim = false;
+        yield return new WaitForSeconds(2f);
         GoToPosition(_bedPoint);
     }
 
+    // PatientController.cs ke andar aakhir mein:
+
+    IEnumerator HitAnimationSequence()
+    {
+        _agent.updateRotation = false;
+        transform.DOLookAt(Camera.main.transform.position, 0.5f, AxisConstraint.Y);
+        _animator.SetBool("hit", true);
+
+        // Hit impact ka intezar
+        yield return new WaitForSeconds(0.4f);
+
+        // VR ke liye: Camera ke parent (XR Origin/Camera Offset) ko dhoondhein
+        Transform cameraParent = Camera.main.transform.parent;
+
+        if (cameraParent != null)
+        {
+            // Heavy Shake: Strength 1.5 aur Vibrato 50
+            cameraParent.DOShakePosition(0.5f, 1.5f, 50, 90, false, true);
+
+            // Rotation shake ke liye agar cameraParent rotation allow karta hai
+            cameraParent.DOShakeRotation(0.5f, 7f, 30);
+        }
+        else
+        {
+            // Agar parent nahi hai, to seedha camera ko force karein (lekin parent behtar hai)
+            Camera.main.transform.DOShakePosition(0.5f, 1.5f, 50).SetRelative(true);
+        }
+
+        yield return new WaitForSeconds(1.5f);
+        _agent.updateRotation = true;
+        _animator.SetBool("hit", false);
+    }
     public void PatientSitDown()
     {
         _agent.enabled = false;
         HandleSuitCase(true);
         DisablePatientWires();
+        _patientFacialController.SetExpression(ExpressionType.Confusion);
 
         _spineTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), 0.8f).SetEase(Ease.OutExpo);
         _HipTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), 0.8f).SetEase(Ease.OutExpo);
@@ -254,12 +317,96 @@ public class PatientController : MonoBehaviour
         _aiFeedback.SetConversationText("대상자의 증상 관찰 및환자 행동을 확인하세요.");
         StartCoroutine(Calm());
     }
+    public void LookAtTarget()
+    {
+        _agent.enabled = false;
+        HandleSuitCase(true);
+        DisablePatientWires();
+        _patientFacialController.SetExpression(ExpressionType.Confusion);
 
+        // 1. Duration ko 2.2 seconds kar diya (Pehle 4.0 tha, is liye slow lag raha tha)
+        float sitDuration = 2.2f;
+
+        // 2. Body movement thodi taiz aur smooth
+        gameObject.transform.DOMove(_patientSitTransform.position, sitDuration).SetEase(Ease.OutQuad);
+        gameObject.transform.DORotateQuaternion(_patientSitTransform.rotation, sitDuration).SetEase(Ease.OutQuad);
+
+        // 3. Spine aur Hip rotation
+        _spineTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+        _HipTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+
+        // 4. Animation foran start karein magar CrossFade ke saath taiz transition dein
+        // 0.3s ka transition jhatka khatam karega magar speed banaye rakhega
+        _animator.CrossFade("sitting", 0.3f);
+        _animator.speed = 0.85f; // Speed 0.6 se barha kar 0.85 kar di
+
+        // 5. Gardan ko move karne ka delay bhi kam kar diya
+        DOVirtual.DelayedCall(1.2f, () => {
+            LookAtTwoTargets(1, 3);
+            _animator.speed = 1.0f; // Normal speed par wapas
+        });
+    }
+  public void LookAtTwoTargets(int firstIndex, int secondIndex)
+{
+    if (_neckAimConstraint == null) return;
+
+    var data = _neckAimConstraint.data.sourceObjects;
+
+    // Har target ke liye loop chalayein taake weight smooth tareeqe se change ho
+    for (int i = 0; i < data.Count; i++)
+    {
+        float targetWeight = (i == firstIndex || i == secondIndex) ? 1f : 0f;
+        
+        // DOTween use kar rahe hain taake weight 1 second mein smooth change ho
+        int index = i; // Closure ke liye index save karein
+        DOTween.To(() => _neckAimConstraint.data.sourceObjects.GetWeight(index), 
+                   x => {
+                       var tempWeights = _neckAimConstraint.data.sourceObjects;
+                       tempWeights.SetWeight(index, x);
+                       _neckAimConstraint.data.sourceObjects = tempWeights;
+                   }, 
+                   targetWeight, 1.5f).SetEase(Ease.InOutSine); 
+    }
+
+    HandlePatientNeck(true);
+    _idleAnim = false;
+}
+    public void LookAtTargetByIndex(int targetIndex)
+    {
+        if (_neckAimConstraint == null) return;
+
+        var data = _neckAimConstraint.data.sourceObjects;
+
+        for (int i = 0; i < data.Count; i++)
+        {
+            // Check karein ke ye wahi index hai jisay dikhana hai ya nahi
+            float finalWeight = (i == targetIndex) ? 1f : 0f;
+
+            int index = i; // Closure handle karne ke liye variable
+
+            // DOTween ke zariye weight ko smooth transition dena
+            DOTween.To(() => _neckAimConstraint.data.sourceObjects.GetWeight(index),
+                       x => {
+                           var tempWeights = _neckAimConstraint.data.sourceObjects;
+                           tempWeights.SetWeight(index, x);
+                           _neckAimConstraint.data.sourceObjects = tempWeights;
+                       },
+                       finalWeight, 1.2f) // 1.2 seconds mein gardan muregi
+                       .SetEase(Ease.OutSine); // Shuru mein tez aur end mein thoda slow (natural)
+        }
+
+        // Rig builder ko refresh karna zaroori hai
+        _rigBuilder.Build();
+        HandlePatientNeck(true);
+        _idleAnim = false;
+    }
     private IEnumerator Calm()
     {
         yield return new WaitForSeconds(2f);
 
         HandlePatientNeck(true);
+        LookAtTargetByIndex(0);
+
         _isTalking = true;
         _patientAudioSource.clip = _patientCalmClip;
         _patientAudioSource.Play();
@@ -305,7 +452,7 @@ public class PatientController : MonoBehaviour
         }
     }
 
-    private void HandlePatientNeck(bool isEnabled)
+    public void HandlePatientNeck(bool isEnabled)
     {
         _rigBuilder.layers[1].active = isEnabled;
     }
