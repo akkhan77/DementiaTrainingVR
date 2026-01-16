@@ -33,7 +33,6 @@ public class PreBriefing : MonoBehaviour
     [SerializeField] private AudioClip[] _slide3InstructionClips; // Size = 5
     [SerializeField] private Color _slide3HighlightColor = Color.yellow;
     [SerializeField] private Color _slide3NormalColor = Color.white;
-
     [Header("Events")]
     public UnityEvent<int> OnSlideOpened;
 
@@ -113,24 +112,53 @@ public class PreBriefing : MonoBehaviour
         ResetSlide3Highlights();
     }
 
+    //private void HighlightSlide3Instruction(int index)
+    //{
+    //    for (int i = 0; i < _slide3InstructionTexts.Length; i++)
+    //    {
+    //        _slide3InstructionTexts[i].color =
+    //            (i == index) ? _slide3HighlightColor : _slide3NormalColor;
+    //    }
+
+    //    for (int i = 0; i < _slide3InstructionRects.Length; i++)
+    //    {
+    //        if (i == index)
+    //        {
+    //            _slide3InstructionRects[i].localScale = Vector3.one * 1.1f;
+    //            break;
+    //        }
+    //    }
+    //}
     private void HighlightSlide3Instruction(int index)
     {
+        // Text Color Update
         for (int i = 0; i < _slide3InstructionTexts.Length; i++)
         {
-            _slide3InstructionTexts[i].color =
-                (i == index) ? _slide3HighlightColor : _slide3NormalColor;
+            // Condition: Agar current index i hai, YA index 3 hai aur i zero hai
+            if (i == index || (index == 3 && i == 0))
+            {
+                _slide3InstructionTexts[i].color = _slide3HighlightColor;
+            }
+            else
+            {
+                _slide3InstructionTexts[i].color = _slide3NormalColor;
+            }
         }
 
+        // Scale (RectTransform) Update
         for (int i = 0; i < _slide3InstructionRects.Length; i++)
         {
-            if (i == index)
+            // Yahan bhi wahi logic: Index 3 par Element 0 ka scale bhi barhega
+            if (i == index || (index == 3 && i == 0))
             {
                 _slide3InstructionRects[i].localScale = Vector3.one * 1.1f;
-                break;
+            }
+            else
+            {
+                _slide3InstructionRects[i].localScale = Vector3.one;
             }
         }
     }
-
     private void ResetSlide3Highlights()
     {
         for (int i = 0; i < _slide3InstructionTexts.Length; i++)

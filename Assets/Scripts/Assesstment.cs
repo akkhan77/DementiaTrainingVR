@@ -39,6 +39,12 @@ public class Assesstment : MonoBehaviour
     [Header("Result Sounds")]
     public AudioClip resultPositiveSound; // image_f64902.png (Question1_wrong.mp3 ya blinking sound)
     public AudioClip resultNegativeSound;
+    [Header("Feedback Images")]
+    [SerializeField] private GameObject _yesFeedbackImage; // Inspector mein Yes (Tick) image dalen
+    [SerializeField] private GameObject _noFeedbackImage;  // Inspector mein No (Cross) image dalen
+    [SerializeField] private float _feedbackDuration = 2.0f;
+    [Header("Result Panel Feedback Icons")]
+    public GameObject[] resultFeedbackIcons;
     void Start()
     {
         StartAssessment();
@@ -116,6 +122,20 @@ public class Assesstment : MonoBehaviour
             ShowSummary();
         }
     }
+    private IEnumerator ShowFeedbackRoutine(GameObject imageToShow)
+    {
+        if (imageToShow != null)
+        {
+            imageToShow.SetActive(true);
+        }
+
+        yield return new WaitForSeconds(_feedbackDuration);
+
+        if (imageToShow != null)
+        {
+            imageToShow.SetActive(false);
+        }
+    }
     public void OnResultButtonClick()
     {
         bool isPositive = CalculateSCAMResult();
@@ -143,9 +163,30 @@ public class Assesstment : MonoBehaviour
     {
         AssessmentQuestion q = questions[currentIdx];
 
-        if (choice == q.correctAnswerIndex)
+        // 1. Buttons ko Disable karein taake double click na ho, lekin gayab na hon
+        // Buttons ke parent group par CanvasGroup component hona chahiye
+        CanvasGroup cg = buttonsGroup.GetComponent<CanvasGroup>();
+        if (cg != null) cg.interactable = false;
+
+        // 2. Image Enable Karein
+        GameObject imageToShow = (choice == 0) ? _yesFeedbackImage : _noFeedbackImage;
+        StartCoroutine(ShowFeedbackAndTransition(imageToShow, choice == q.correctAnswerIndex, choice));
+    }
+
+    private IEnumerator ShowFeedbackAndTransition(GameObject img, bool isCorrect, int choice)
+    {
+        // Feedback image dikhayen
+        if (img != null) img.SetActive(true);
+
+        // Intezar karein taake user feedback dekh sakay
+        yield return new WaitForSeconds(_feedbackDuration);
+
+        // Image band karein
+        if (img != null) img.SetActive(false);
+
+        // AB buttons ko hide karein aur agla logic chalayen
+        if (isCorrect)
         {
-            // SAHI JAWAB: Buttons ko foran band kar dein
             if (buttonsGroup != null) buttonsGroup.SetActive(false);
 
             string label = (choice == 0) ? "Yes" : "No";
@@ -153,27 +194,46 @@ public class Assesstment : MonoBehaviour
 
             if (correctChime != null) guideAudioSource.PlayOneShot(correctChime);
 
-            // 6 second wait karke agla sawal layein
             StartCoroutine(HandleCorrectAnswer());
         }
         else
         {
-            attemptCount++;
-            if (attemptCount < 2)
-            {
-                StartCoroutine(ShowTryAgainFeedback());
-            }
-            else
-            {
-                // Doosri ghalti: Buttons band aur agla sawal
-                if (buttonsGroup != null) buttonsGroup.SetActive(false);
+            // Ghalat jawab ka logic
+            HandleWrongAnswer(choice);
+        }
 
-                string label = (choice == 0) ? "Yes" : "No";
-                history.Add($"{GetFeatureName(currentIdx)}: <b>{label} (Failed)</b>");
-                attemptCount = 0;
-                currentIdx++;
-                UpdateUI();
-            }
+        // Buttons ko wapis interactable kardein agle sawal ke liye
+        CanvasGroup cg = buttonsGroup.GetComponent<CanvasGroup>();
+        if (cg != null) cg.interactable = true;
+    }
+
+    private void HandleWrongAnswer(int choice)
+    {
+        attemptCount++;
+        if (attemptCount < 2)
+        {
+            StartCoroutine(ShowTryAgainFeedback());
+        }
+        else
+        {
+            if (buttonsGroup != null) buttonsGroup.SetActive(false);
+
+            string label = (choice == 0) ? "Yes" : "No";
+            history.Add($"{GetFeatureName(currentIdx)}: <b>{label} (Failed)</b>");
+            attemptCount = 0;
+            currentIdx++;
+            UpdateUI();
+        }
+    }
+
+    // Image ko thori dair dikha kar band karne ka helper method
+    private IEnumerator ShowFeedbackImage(GameObject img)
+    {
+        if (img != null)
+        {
+            img.SetActive(true);
+            yield return new WaitForSeconds(_feedbackDuration);
+            img.SetActive(false);
         }
     }
 
@@ -195,35 +255,48 @@ public class Assesstment : MonoBehaviour
 
     void RefreshResultUI()
     {
-        // 1. Buttons ke colors update karein
-        // loop ko featureYesImages.Length tak chalayein taake saare buttons check hon
-        for (int i = 0; i < featureYesImages.Length; i++)
+        // Pehle saari 10 images ko band kar dein taake purana data saaf ho jaye
+        foreach (GameObject icon in resultFeedbackIcons)
         {
-            // Check karein ke is index ki history exist karti hai
-            if (i < history.Count)
+            if (icon != null) icon.SetActive(false);
+        }
+
+        for (int i = 0; i < history.Count; i++)
+        {
+            bool isYes = history[i].Contains("Yes");
+
+            // Buttons ke colors update karein
+            if (i < featureYesImages.Length)
             {
-                bool isYes = history[i].Contains("Yes");
-
-                // Yes Button ka color set karein
                 featureYesImages[i].color = isYes ? selectedColor : defaultColor;
-
-                // No Button ka color set karein
                 featureNoImages[i].color = !isYes ? selectedColor : defaultColor;
+            }
+
+            // --- Feedback Icons Logic ---
+            if (resultFeedbackIcons != null && resultFeedbackIcons.Length >= 10)
+            {
+                if (isYes)
+                {
+                    // Agar Yes hai, to array ka index (i) on karein (0 se 4 tak)
+                    resultFeedbackIcons[i].SetActive(true);
+                }
+                else
+                {
+                    // Agar No hai, to array ka index (i + 5) on karein (5 se 9 tak)
+                    resultFeedbackIcons[i + 5].SetActive(true);
+                }
             }
         }
 
-        // 2. Algorithm Calculation
+        // Result Calculation (IsPositive)
         bool isPositive = CalculateSCAMResult();
-
-        // 3. Korean Text Update
         if (isPositive)
             finalResultsText.text = "<align=center><b>¼¶¸Á (+) ÆÇÁ¤</align>";
         else
             finalResultsText.text = "<align=center>¼¶¸Á (-) ÆÇÁ¤</align>";
     }
 
-   
-        bool CalculateSCAMResult()
+    bool CalculateSCAMResult()
         {
             foreach (string entry in history)
             {

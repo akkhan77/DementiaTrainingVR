@@ -85,7 +85,9 @@ public class GameController : MonoBehaviour
     [Header("Patient Reference")]
     public PatientController patientScript;
     public Transform clockLookAnchor;
-    public GameObject mobilemodel;
+    public GameObject mobilemodel,bookmdl,picturemdl,medicinebottle;
+    public GameObject videocallM, musicM;
+  
     void Awake()
     {
         if (photoButton) photoButton.SetActive(false);
@@ -170,7 +172,7 @@ public class GameController : MonoBehaviour
     private IEnumerator TriggerPatientFinalResponse()
     {
         patientScript.LookAtTargetByIndex(0);
-
+        medicinebottle.SetActive(false);
        
         // 1. Medicine Button band karein
         if (medicineButton != null) medicineButton.SetActive(false);
@@ -225,6 +227,7 @@ public class GameController : MonoBehaviour
 
             // Debug.Log("Clip 16 Finished: Opening Episode Panel now.");
         }
+
     }
     private IEnumerator ActivateNextStepWithDelay(float delay)
     {
@@ -234,36 +237,43 @@ public class GameController : MonoBehaviour
         {
             case InterventionStage.Clock:
                 currentStage = InterventionStage.Booklet;
-                patientScript.LookAtTargetByIndex(3);
                 StartStage1_5Blinking(); // Model blink shuru
                 break;
 
             case InterventionStage.Booklet:
                 currentStage = InterventionStage.Photo;
-                mobilemodel.SetActive(true);
-        _patientFacialController.SetExpression(ExpressionType.Happy);
-
+                photoOutline.enabled = true;
+               _patientFacialController.SetExpression(ExpressionType.Happy);
                 patientScript.LookAtTargetByIndex(4);
-                if (photoButton) photoButton.SetActive(true); // Family Photo button ON
+                //StartStage1_5Blinking();
+                photoOutline.gameObject.GetComponent<OutlineBlinker>().enabled = true;
+                //if (photoButton) photoButton.SetActive(true); // Family Photo button ON
                 break;
 
             case InterventionStage.Photo:
                 currentStage = InterventionStage.VideoCall;
-         
-                if (photoButton) photoButton.SetActive(false); // Purana band
+                picturemdl.SetActive(false);
+                patientScript.animator.SetBool("photo", false);
+                patientScript.LookAtTargetByIndex(0);
+                patientScript.MoveToSitPosition();
+                photoOutline.gameObject.SetActive(true);
+                //if (photoButton) photoButton.SetActive(false); // Purana band
                 if (videoCallButton) videoCallButton.SetActive(true); // Naya ON
                 break;
 
             case InterventionStage.VideoCall:
                 currentStage = InterventionStage.Music;
                 if (videoCallButton) videoCallButton.SetActive(false);
+
                 if (musicButton) musicButton.SetActive(true);
                 break;
 
             case InterventionStage.Music:
                 currentStage = InterventionStage.Medicine;
                 patientScript.LookAtTargetByIndex(3);
-                mobilemodel.SetActive(false);
+                //mobilemodel.SetActive(false);
+                patientScript.StopMobilePose();
+
                 if (musicButton) musicButton.SetActive(false);
                 if (medicineButton) medicineButton.SetActive(true);
                 break;
@@ -286,14 +296,17 @@ public class GameController : MonoBehaviour
     {
         if (currentStage == InterventionStage.Photo)
         {
-
             AIFeedbackController.instance.ConversationCanvas.SetActive(true);
             string txt = "서영호님, 따님을 기다리면서 가족사진을 볼까요?";
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
-            photoButton.GetComponent<Button>().interactable = false;
-
+            patientScript.LookAtTargetByIndex(3);
+            photoOutline.gameObject.GetComponent<OutlineBlinker>().enabled = false;
+            bookmdl.SetActive(false);
+            picturemdl.SetActive(true);
             AIFeedbackController.instance.StartListening(ai_feedback06, txt);
+            photoOutline.gameObject.SetActive(false);
+
         }
     }
 
@@ -305,9 +318,11 @@ public class GameController : MonoBehaviour
             string txt = "따님과 영상통화 연결해 드릴까요?";
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
-
+            patientScript.LookAtTargetByIndex(0);
             AIFeedbackController.instance.StartListening(ai_feedback07, txt);
-            videoCallButton.GetComponent<Button>().interactable = false;
+            patientScript.CallMobilePose();
+            //videoCallButton.GetComponent<Button>().interactable = false;  
+            videoCallButton.SetActive(false);
         }
     }
 
@@ -320,7 +335,10 @@ public class GameController : MonoBehaviour
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
             musicButton.GetComponent<Button>().interactable = false;
-
+            videocallM.SetActive(false);
+            musicM.SetActive(true);
+            patientScript.StartMobileVideoCall();
+            musicButton.SetActive(false);
             AIFeedbackController.instance.StartListening(ai_feedback08, txt);
         }
     }
@@ -333,9 +351,22 @@ public class GameController : MonoBehaviour
             string txt = "필요시 약물적 중재를 적용할 수 있습니다.";
             AIFeedbackController.instance.SetConversationText(txt);
             AIFeedbackController.instance.StartBlinking();
+            medicinebottle.SetActive(true);
+            patientScript._animator.SetBool("onbed", false);
+            patientScript.LookAtTargetmedi();
+            //patientScript.animator.SetBool("photo", true);
+            _patientFacialController.SetExpression(ExpressionType.Happy);
+            StartCoroutine(MediAnimDelay());
+            patientScript.LookAtTwoTargets(0, 2);
 
             AIFeedbackController.instance.StartListening(ai_feedback09, txt);
         }
+    }
+
+    IEnumerator MediAnimDelay()
+    {
+        yield return new WaitForSeconds(1.5f);
+        patientScript.animator.SetBool("istablet", true);
     }
     private IEnumerator GenericBlinkRoutine(Outline target)
     {
@@ -372,42 +403,19 @@ public class GameController : MonoBehaviour
             string stage5Text = "네, 맞아요. 서영호님은 지금 동산병원에 입원해 계세요. 입원하셔서 치료를 잘 받고 계세요. 서영호님이 잘 지내실 수 있도록 옆에서 도와드릴게요.";
             AIFeedbackController.instance.SetConversationText(stage5Text);
             AIFeedbackController.instance.StartBlinking();
-
+            patientScript.LookAtTargetByIndex(3);
+            patientScript.animator.SetBool("photo", true);
+            StartCoroutine(Enablebook());
             AIFeedbackController.instance.StartListening(ai_feedback05, stage5Text);
         }
     }
 
-    //private void HandleAudioFinished()
-    //{
-    //    // Har audio khatam hone par agla stage set karein
-    //    switch (currentStage)
-    //    {
-    //        case InterventionStage.Clock:
-    //            currentStage = InterventionStage.Booklet;
-    //            StartStage1_5Blinking(); // Booklet (Jo aapne pehle likha tha)
-    //            break;
+    IEnumerator Enablebook()
+    {
+        yield return new WaitForSeconds(0.2f);
+        bookmdl.SetActive(true);
+    }
 
-    //        case InterventionStage.Booklet:
-    //            currentStage = InterventionStage.Photo;
-    //            StartBlinkEffect(photoOutline); // Photo blinking shuru
-    //            break;
-
-    //        case InterventionStage.Photo:
-    //            currentStage = InterventionStage.VideoCall;
-    //            StartBlinkEffect(videoCallOutline); // Video Call blinking
-    //            break;
-
-    //        case InterventionStage.VideoCall:
-    //            currentStage = InterventionStage.Music;
-    //            StartBlinkEffect(musicOutline); // Music blinking
-    //            break;
-
-    //        case InterventionStage.Music:
-    //            currentStage = InterventionStage.Medicine;
-    //            StartBlinkEffect(medicineOutline); // Medicine blinking
-    //            break;
-    //    }
-    //}
     private void StartBlinkEffect(Outline targetOutline)
     {
         isItemReady = true;
@@ -429,6 +437,7 @@ public class GameController : MonoBehaviour
     {
         if (isStage1_4Ready)
         {
+            patientScript.RotatePatientSmoothly();
             isStage1_4Ready = false; // Dobara click na ho
             StopStage1_4Visuals(); // Blinking rok dein
             AIFeedbackController.instance.ConversationCanvas.SetActive(true);
@@ -441,6 +450,7 @@ public class GameController : MonoBehaviour
                 AIFeedbackController.instance.StartListening(ai_feedback04, stage1_4Text);
             }
         }
+
     }
     private IEnumerator ClockCalendarBlinkRoutine()
     {
@@ -455,9 +465,7 @@ public class GameController : MonoBehaviour
     private IEnumerator PlayEndSequence()
     {
         yield return new WaitForSeconds(0.5f);
-
         // 1. Clip 11: Nurse Question (Debriefing)
-   
         AIFeedbackController.instance.ConversationCanvas.SetActive(true);
         AIFeedbackController.instance.SetConversationText("네 가지 상황 중 가장 어려웠던 점 하나만 말해주세요.");
         AIFeedbackController.instance.StartBlinking();
@@ -467,11 +475,9 @@ public class GameController : MonoBehaviour
             _feedbackSource.Play();
             yield return new WaitWhile(() => _feedbackSource.isPlaying);
         }
-
         // 2. User Response & AI Summary (Clip 10)
         // Hum AIFeedbackController ko bolenge ke Clip 10 chalao
         AIFeedbackController.instance.StartListening(aiSummaryClip10, "Listening to your response...");
-
         // --- ZAROORI FIX: Clip 12 ko tab tak rokein jab tak AI Summary (Clip 10) khatam na ho jaye ---
         // Hum AIFeedbackController ke AudioSource ko check karenge
         AudioSource aiSource = AIFeedbackController.instance.GetComponent<AudioSource>();
@@ -660,14 +666,14 @@ public class GameController : MonoBehaviour
         if (patientScript != null && clockLookAnchor != null)
         {
             // Pehle gardan ka purana player focus khatam karein
-            patientScript.HandlePatientNeck(false);
+            //patientScript.HandlePatientNeck(false);
 
             // Sit animation play karein
             //patientScript.animator.Play("Sit");
 
             // IMPORTANT: Patient ko sit position par le jayen aur gardan anchor ki taraf murein
             patientScript.LookAtTarget();
-          
+
         }
         StartCoroutine(ClockCalendarBlinkRoutine());
     }

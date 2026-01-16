@@ -45,6 +45,10 @@ public class KNPIAssessmentManager : MonoBehaviour
     public GameObject knpiPanel;
     public GameObject knpiPanel1;
     private Coroutine flowRoutine;
+    [Header("Feedback Images")]
+    [SerializeField] private GameObject _yesFeedbackImage; // Inspector mein Yes (Tick) image dalen
+    [SerializeField] private GameObject _noFeedbackImage;  // Inspector mein No (Cross) image dalen
+    [SerializeField] private float _feedbackDuration = 2.0f;
     private void Start()
     {
         knpiPanel1.SetActive(true);
@@ -142,12 +146,50 @@ public class KNPIAssessmentManager : MonoBehaviour
             }
         }
     }
+    //public void OnClickAnswer(bool userSelection)
+    //{
+    //    // 1. User ki choice save karein taake result mein dikh sake
+    //    questions[currentQuestionIndex].isPresent = userSelection;
+
+    //    // 2. Check karein ke answer sahi hai ya nahi
+    //    if (userSelection == questions[currentQuestionIndex].correctAnswer)
+    //    {
+    //        HandleCorrectAnswer();
+    //    }
+    //    else
+    //    {
+    //        if (!hasTriedAgain)
+    //        {
+    //            ShowTryAgain();
+    //        }
+    //        else
+    //        {
+    //            HandleCorrectAnswer();
+    //        }
+    //    }
+    //}
     public void OnClickAnswer(bool userSelection)
     {
-        // 1. User ki choice save karein taake result mein dikh sake
+        // 1. User ki choice save karein
         questions[currentQuestionIndex].isPresent = userSelection;
 
-        // 2. Check karein ke answer sahi hai ya nahi
+        // 2. Feedback Image Enable Karein
+        GameObject imageToShow = userSelection ? _yesFeedbackImage : _noFeedbackImage;
+        StartCoroutine(ShowFeedbackAndProceed(imageToShow, userSelection));
+    }
+
+    private IEnumerator ShowFeedbackAndProceed(GameObject img, bool userSelection)
+    {
+        // Image dikhayen
+        if (img != null) img.SetActive(true);
+
+        // Thori dair intezar (feedback duration)
+        yield return new WaitForSeconds(_feedbackDuration);
+
+        // Image band karein
+        if (img != null) img.SetActive(false);
+
+        // 3. Check karein ke answer sahi hai ya nahi aur agay barhein
         if (userSelection == questions[currentQuestionIndex].correctAnswer)
         {
             HandleCorrectAnswer();

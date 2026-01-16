@@ -61,6 +61,9 @@ public class PatientController : MonoBehaviour
     [Header("Look At Clock Settings")]
     [SerializeField] private MultiAimConstraint _neckAimConstraint;
     [SerializeField] private Transform _clockTransform, _hospitalreg, _familyphoto;
+    [Header("Video Call Settings")]
+    [SerializeField] private TwoBoneIKConstraint _leftHandIK;
+    [SerializeField] private Transform _mobileTarget;
     void Start()
     {
         _mouthBlendShapeIndex = _faceRenderer.sharedMesh.GetBlendShapeIndex("talk");
@@ -80,7 +83,72 @@ public class PatientController : MonoBehaviour
             HandleReachedDestination();
         }
     }
+    public void CallMobilePose()
+    {
+        // 1. Mobile model ko active karein
+        if (GameController.instance.mobilemodel != null)
+            GameController.instance.mobilemodel.SetActive(true);
 
+        // 2. TARGET POSITION (Ise foran set karein taake IK sahi raste par chale)
+        Vector3 videoCallPos = new Vector3(-0.135f, 0.416f, 0.318f);
+        Vector3 videoCallRot = new Vector3(-15.412f, 63.972f, 100.992f);
+
+        // Isay fast move karein taake hath uthne se pehle target tayyar ho
+        _mobileTarget.DOLocalMove(videoCallPos, 0.5f).SetEase(Ease.Linear);
+        _mobileTarget.DOLocalRotate(videoCallRot, 0.5f).SetEase(Ease.Linear);
+
+        // 3. SMOOTH IK WEIGHT (Slow start ke liye Ease.InOutSine use kiya hai)
+        // Duration ko 2.0s kar diya hai taake jhatka bilkul mehsoos na ho
+        _leftHandIK.weight = 0f;
+        DOTween.To(() => _leftHandIK.weight, x => _leftHandIK.weight = x, 1f, 2.0f)
+            .SetEase(Ease.InOutSine)
+            .OnUpdate(() => {
+                _rigBuilder.Build(); // Sync animator and rig
+        });
+
+        // 4. Neck Movement (Hath upar pohonchne ke baad)
+        DOVirtual.DelayedCall(1.5f, () => {
+            LookAtTargetByIndex(0); // Look at mobarea
+        });
+    }
+    public void StartMobileVideoCall()
+    {
+        // 1. Mobile model ko active karein
+        if (GameController.instance.mobilemodel != null)
+            GameController.instance.mobilemodel.SetActive(true);
+
+        // 2. TARGET POSITION & ROTATION (Jo aapne image mein di hain)
+        // In values ko hum LocalSpace mein set karenge taake ye hamesha patient ke mutabiq rahein
+        Vector3 newPos = new Vector3(-0.292f, 0.368f, 0.241f);
+        Vector3 newRot = new Vector3(-29.886f, 188.209f, 81.757f);
+
+        // Smooth transition ke liye DOTween use karein
+        _mobileTarget.DOLocalMove(newPos, 1.2f).SetEase(Ease.OutQuad);
+        _mobileTarget.DOLocalRotate(newRot, 1.2f).SetEase(Ease.OutQuad);
+
+        // 3. Left Hand IK Weight smoothly 1 karein
+        _leftHandIK.weight = 0f;
+        DOTween.To(() => _leftHandIK.weight, x => _leftHandIK.weight = x, 1f, 1.5f)
+            .SetEase(Ease.OutCubic)
+            .OnUpdate(() => {
+                _rigBuilder.Build(); // Hath ko force refresh karein
+            });
+
+        // 4. Neck Movement (Mobile ki taraf dekhne ke liye)
+        DOVirtual.DelayedCall(1.0f, () => {
+            LookAtTwoTargets(0, 2);
+            // Ensure karein ke target 0 mobarea hi ho
+        });
+    }
+    // Mobile khatam karne ke liye function
+    public void StopMobilePose()
+    {
+        DOTween.To(() => _leftHandIK.weight, x => _leftHandIK.weight = x, 0f, 0.8f)
+            .OnUpdate(() => _rigBuilder.Build());
+
+        if (GameController.instance.mobilemodel != null)
+            GameController.instance.mobilemodel.SetActive(false);
+    }
     private void HandleTalking()
     {
         if (_isTalking)
@@ -142,7 +210,22 @@ public class PatientController : MonoBehaviour
             _faceRenderer.SetBlendShapeWeight(_eyesBlendShapeIndex, _blinkValue);
         }
     }
+    [ContextMenu("Smooth Rotate Patient")]
+    public void RotatePatientSmoothly()
+    {
 
+        Vector3 targetEuler = new Vector3(0f, -365f, 1.118f);
+        LookAtTwoTargets(1, 3);
+        // DORotateQuaternion use karne se 'flipping' ka masla hal ho jata hai
+        // Hum direct Quaternion calculate kar rahe hain taake wo aaram se target par jaye
+        transform.DORotateQuaternion(Quaternion.Euler(targetEuler), 1.5f)
+            .SetEase(Ease.InOutSine)
+            .OnComplete(() => {
+                Debug.Log("Rotation Fixed without flipping!");
+            });
+        _animator.SetBool("onbed", true);
+      
+    }
     private void HandleReachedDestination()
     {
         if (_currentTarget == null || _hasArrived)
@@ -317,6 +400,72 @@ public class PatientController : MonoBehaviour
         _aiFeedback.SetConversationText("대상자의 증상 관찰 및환자 행동을 확인하세요.");
         StartCoroutine(Calm());
     }
+    public void MoveToSitPosition()
+    {
+        if (_agent != null) _agent.enabled = false;
+
+        float sitDuration = 2.2f;
+
+        // 1. Exact Position aur Rotation jo aapne inspector mein dikhayi
+        Vector3 targetPos = new Vector3(-1.913534f, 0.9514837f, 0.696336f);
+        Vector3 targetRot = new Vector3(4.172f, -270.422f, -2.28f);
+
+        // Body movement smoothly start karein
+        gameObject.transform.DOMove(targetPos, sitDuration).SetEase(Ease.OutQuad);
+        gameObject.transform.DORotateQuaternion(Quaternion.Euler(targetRot), sitDuration).SetEase(Ease.OutQuad);
+
+        // 2. Spine aur Hip reset taake posture seedha rahe
+        _spineTargetTransform.DOLocalRotate(Vector3.zero, sitDuration).SetEase(Ease.OutQuad);
+        _HipTargetTransform.DOLocalRotate(Vector3.zero, sitDuration).SetEase(Ease.OutQuad);
+
+        // 3. Mobile Target (mobarea) ko bhi uski sahi jagah move karein
+        Vector3 mobPos = new Vector3(-0.292f, 0.368f, 0.241f);
+        Vector3 mobRot = new Vector3(-29.886f, 188.209f, 81.757f);
+
+        // mobarea ko rig ke relative local move karein
+        _mobileTarget.DOLocalMove(mobPos, sitDuration).SetEase(Ease.OutQuad);
+        _mobileTarget.DOLocalRotate(mobRot, sitDuration).SetEase(Ease.OutQuad);
+        //// NavMeshAgent ko stop karna zaroori hai taake DOTween kaam kare
+        //if (_agent != null) _agent.enabled = false;
+
+        //// Duration (slow movement ke liye 2.2 seconds rakha hai)
+        //float sitDuration = 2.2f;
+
+        //// 1. Patient ki Body position aur rotation par move karein
+        //// _patientSitTransform wo position hai jo aapne pehle se set ki hui hai
+        //gameObject.transform.DOMove(_patientSitTransform.position, sitDuration).SetEase(Ease.OutQuad);
+        //gameObject.transform.DORotateQuaternion(_patientSitTransform.rotation, sitDuration).SetEase(Ease.OutQuad);
+
+        //// 2. Spine aur Hip ko bhi reset karein taake baki jism seedha rahe
+        //_spineTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+        //_HipTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+    }
+
+    public void LookAtTargetmedi()
+    {
+        _agent.enabled = false;
+        HandleSuitCase(true);
+        DisablePatientWires();
+        _patientFacialController.SetExpression(ExpressionType.Confusion);
+
+        // 1. Duration ko 2.2 seconds kar diya (Pehle 4.0 tha, is liye slow lag raha tha)
+        float sitDuration = 2.2f;
+
+        // 2. Body movement thodi taiz aur smooth
+        gameObject.transform.DOMove(_patientSitTransform.position, sitDuration).SetEase(Ease.OutQuad);
+        gameObject.transform.DORotateQuaternion(_patientSitTransform.rotation, sitDuration).SetEase(Ease.OutQuad);
+
+        // 3. Spine aur Hip rotation
+        _spineTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+        _HipTargetTransform.DOLocalRotate(new Vector3(0, 0, 0), sitDuration).SetEase(Ease.OutQuad);
+        // 4. Animation foran start karein magar CrossFade ke saath taiz transition dein
+        // 0.3s ka transition jhatka khatam karega magar speed banaye rakhega
+        _animator.CrossFade("sitting", 0.3f);
+        _animator.speed = 0.85f; // Speed 0.6 se barha kar 0.85 kar di
+
+        // 5. Gardan ko move karne ka delay bhi kam kar diya
+    }
+
     public void LookAtTarget()
     {
         _agent.enabled = false;
@@ -342,7 +491,8 @@ public class PatientController : MonoBehaviour
 
         // 5. Gardan ko move karne ka delay bhi kam kar diya
         DOVirtual.DelayedCall(1.2f, () => {
-            LookAtTwoTargets(1, 3);
+            //LookAtTwoTargets(1, 3);
+            LookAtTargetByIndex(0);
             _animator.speed = 1.0f; // Normal speed par wapas
         });
     }
